@@ -30,7 +30,8 @@ Pedantic checking of DWARF stored in ELF files.
 
 ../dwarflint/dwarfcheck --check-debug-lines a.out
 WE ARE RUNNING dwarfcheck !!!!!
-****CHECKING DEBUG LINES****./dwarflint/dwarfcheck --check-debug-vars a.out
+****CHECKING DEBUG LINES****
+./dwarflint/dwarfcheck --check-debug-vars a.out
 WE ARE RUNNING dwarfcheck !!!!!
 ****CHECKING DEBUG VARIABLES***
 
