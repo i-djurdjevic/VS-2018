@@ -78,85 +78,7 @@ struct tabrule
 };
 
 // Sharp 0.0% coverage (i.e. not a single address byte is covered)
-const int cov_00 = -1;
-
-struct tabrules_t
-  : public std::vector<tabrule>
-{
-  tabrules_t (std::string const &rule)
-  {
-    std::stringstream ss;
-    ss << rule;
-
-    std::string item;
-    while (std::getline (ss, item, ','))
-      {
-	if (item.empty ())
-	  continue;
-	int start;
-	int step;
-	char const *ptr = item.c_str ();
-
-	if (item.length () >= 3
-	    && std::strncmp (ptr, "0.0", 3) == 0)
-	  {
-	    start = cov_00;
-	    ptr += 3;
-	  }
-	else
-	  start = std::strtol (ptr, const_cast<char **> (&ptr), 10);
-
-	if (*ptr == 0)
-	  step = 0;
-	else
-	  {
-	    if (*ptr != ':')
-	      {
-		step = 0;
-		goto garbage;
-	      }
-	    else
-	      ptr++;
-
-	    step = std::strtol (ptr, const_cast<char **> (&ptr), 10);
-	    if (*ptr != 0)
-	    garbage:
-	      std::cerr << "Ignoring garbage at the end of the rule item: '"
-			<< ptr << '\'' << std::endl;
-	  }
-
-	push_back (tabrule (start, step));
-      }
-
-    push_back (tabrule (100, 0));
-    std::sort (begin (), end ());
-  }
-
-  void next ()
-  {
-    if (at (0).step == 0)
-      erase (begin ());
-    else
-      {
-	if (at (0).start == cov_00)
-	  at (0).start = 0;
-	at (0).start += at (0).step;
-	if (size () > 1)
-	  {
-	    if (at (0).start > at (1).start)
-	      erase (begin ());
-	    while (size () > 1
-		   && at (0).start == at (1).start)
-	      erase (begin ());
-	  }
-      }
-  }
-
-  bool match (int value) const
-  {
-    return at (0).start == value;
-  }
-};
+const int cov_00 = 0;
 
 #define TYPE(T) dt_##T,
   enum die_type_e
@@ -206,58 +128,6 @@ public:
   }
 };
 
-class mutability_t
-{
-  bool _m_is_mutable;
-  bool _m_is_immutable;
-
-public:
-  mutability_t ()
-    : _m_is_mutable (false)
-    , _m_is_immutable (false)
-  {
-  }
-
-  void set (bool what)
-  {
-    if (what)
-      _m_is_mutable = true;
-    else
-      _m_is_immutable = true;
-  }
-
-  void set_both ()
-  {
-    set (true);
-    set (false);
-  }
-
-  void locexpr (Dwarf_Op *expr, size_t len)
-  {
-    // We scan the expression looking for DW_OP_{bit_,}piece
-    // operators which mark ends of sub-expressions to us.
-    bool m = false;
-    for (size_t i = 0; i < len; ++i)
-      switch (expr[i].atom)
-	{
-	case DW_OP_implicit_value:
-	case DW_OP_stack_value:
-	  m = true;
-	  break;
-
-	case DW_OP_bit_piece:
-	case DW_OP_piece:
-	  set (m);
-	  m = false;
-	  break;
-	};
-    set (m);
-  }
-
-  bool is_mutable () const { return _m_is_mutable; }
-  bool is_immutable () const { return _m_is_immutable; }
-};
-
 struct error
   : public std::runtime_error
 {
@@ -298,6 +168,112 @@ process(Dwarf *c_dw, dwarf const &dw)
     std::cout << "****CHECKING DEBUG LINES****\n";
   } else if (opt_check_dbg_variables.seen()) {
     std::cout << "****CHECKING DEBUG VARIABLES****\n";
+  for (all_dies_iterator<dwarf> iter = all_dies_iterator<dwarf> (dw);
+       iter != all_dies_iterator<dwarf> (); ++iter)
+  {
+	 dwarf::debug_info_entry const &die = *iter;
+         bool bFormalParameter = die.tag () == DW_TAG_formal_parameter;
+         bool bLocalVar = die.tag () == DW_TAG_variable;
+         
+         if(!bFormalParameter && !bLocalVar)
+	     continue;
+
+	Dwarf_Die die_c_var,
+	*die_c = dwarf_offdie (c_dw, die.offset (), &die_c_var);
+	if (die_c == NULL)
+		std::cout << "there is no die c !!" << std::endl;
+	dwarf::debug_info_entry::attributes_type const &attrs
+	= die.attributes ();
+        
+	Dwarf_Attribute locattr_mem,
+	  *locattr = dwarf_attr_integrate (die_c, DW_AT_location, &locattr_mem);
+        
+	if (attrs.find (DW_AT_external) != attrs.end () && locattr == NULL)
+	  continue;
+
+  std::vector<dwarf::debug_info_entry> const &die_stack = iter.stack ();
+  dwarf::debug_info_entry const &parent = *(die_stack.rbegin () + 1);
+
+  Dwarf_Die die_c_fun;
+  const char *fname;
+  if(dwarf_offdie (c_dw, parent.offset (), &die_c_fun) != NULL)
+  {
+     fname = dwarf_diename(&die_c_fun);
+     
+  }
+
+	const char *name = dwarf_diename(&die_c_var);
+	if (name)
+    if(strlen(name) > 1 && name[0] == '_' && name[1] == '_')
+      continue;
+    std::cout << "Function <" << fname << ">" << " ";
+	  std::cout << "variable <" << name << ">:" << std::endl;
+
+        int coverage;
+        Dwarf_Op *expr;
+        size_t len;
+
+    if (attrs.find (DW_AT_const_value) != attrs.end ())
+        coverage = 100;
+    else if (locattr == NULL)
+	      coverage = cov_00;
+    else if (dwarf_getlocation (locattr, &expr, &len) == 0)
+	      coverage = (len == 0) ? cov_00 : 100;
+    else
+    {
+      try
+      {
+        dwarf::ranges ranges (find_ranges (die_stack));
+        size_t length = 0;
+        size_t covered = 0;
+        size_t nlocs = 10;
+        Dwarf_Op *exprs[nlocs];
+        size_t exprlens[nlocs];
+
+        for (dwarf::ranges::const_iterator rit = ranges.begin ();
+        rit != ranges.end (); ++rit)
+        {
+          Dwarf_Addr low = (*rit).first;
+          Dwarf_Addr high = (*rit).second;
+          length += high - low;
+
+          for (Dwarf_Addr addr = low; addr < high; ++addr)
+          {
+            int got = dwarf_getlocation_addr (locattr, addr,
+              exprs, exprlens, nlocs);
+            if (got < 0)
+              throw ::error (std::string ("dwarf_getlocation_addr: ")
+               + dwarf_errmsg (-1));
+            for (int i = 0; i < got; ++i)
+            {
+              if (exprlens[i] > 0)
+              {
+                covered++;
+                break;
+              }
+            }
+          }
+        }
+
+        if (length == 0)
+          throw ::error ("zero-length range");
+
+        if (covered == 0)
+          coverage = cov_00;
+        else
+          coverage = 100 * covered / length;
+      }
+      catch (::error const &e)
+      {
+        std::cout << "error: " << die_locus (die) << ": "
+        << e.what () << '.' << std::endl;
+        continue;
+      }
+    }
+
+       //Report the result.
+       std::cout << "	-location coverage:" << coverage << "\%" << std::endl;
+    }
   }
 }
 
