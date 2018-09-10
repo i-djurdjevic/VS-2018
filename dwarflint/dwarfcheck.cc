@@ -47,36 +47,6 @@ global_opt<void_option> opt_check_dbg_variables
 in .debug_loc or .debug_info DWARF sections about variables.",
    "check-debug-vars");
 
-// where.c needs to know how to format certain wheres.  The module
-// doesn't know that we don't use these :)
-extern "C"
-bool
-show_refs ()
-{
-  return false;
-}
-
-#define DIE_TYPES		\
-  TYPE(single_addr)		\
-  TYPE(artificial)		\
-  TYPE(inlined)			\
-  TYPE(inlined_subroutine)	\
-  TYPE(no_coverage)		\
-  TYPE(mutable)			\
-  TYPE(immutable)
-
-struct tabrule
-{
-  int start;
-  int step;
-  tabrule (int a_start, int a_step)
-    : start (a_start), step (a_step)
-  {}
-  bool operator < (tabrule const &other) const {
-    return start < other.start;
-  }
-};
-
 // Sharp 0.0% coverage (i.e. not a single address byte is covered)
 const int cov_00 = 0;
 
