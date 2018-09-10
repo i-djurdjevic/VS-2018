@@ -80,54 +80,6 @@ struct tabrule
 // Sharp 0.0% coverage (i.e. not a single address byte is covered)
 const int cov_00 = 0;
 
-#define TYPE(T) dt_##T,
-  enum die_type_e
-    {
-      DIE_TYPES
-      dt__count
-    };
-#undef TYPE
-
-class die_type_matcher
-  : public std::bitset<dt__count>
-{
-  class invalid {};
-  std::pair<die_type_e, bool>
-  parse (std::string &desc)
-  {
-    bool val = true;
-    if (desc == "")
-      throw invalid ();
-
-#define TYPE(T)					\
-    if (desc == #T)				\
-      return std::make_pair (dt_##T, val);
-    DIE_TYPES
-#undef TYPE
-
-      throw invalid ();
-  }
-
-public:
-  die_type_matcher (std::string const &rule)
-  {
-    std::stringstream ss;
-    ss << rule;
-
-    std::string item;
-    while (std::getline (ss, item, ','))
-      try
-	{
-	  std::pair<die_type_e, bool> const &ig = parse (item);
-	  set (ig.first, ig.second);
-	}
-      catch (invalid &i)
-	{
-	  std::cerr << "Invalid die type: " << item << std::endl;
-	}
-  }
-};
-
 struct error
   : public std::runtime_error
 {
