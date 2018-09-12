@@ -86,24 +86,56 @@ is_inlined (dwarf::debug_info_entry const &die)
 void
 process(Dwarf *c_dw, dwarf const &dw)
 {
-  if (opt_check_dbg_lines.seen()) {
+  bool is_dbg_line_opt = opt_check_dbg_lines.seen();
+  bool is_dbg_var_opt = opt_check_dbg_variables.seen();
+  int num_of_errs = 0;
+  if (is_dbg_line_opt)
     std::cout << "****CHECKING DEBUG LINES****\n";
-  } else if (opt_check_dbg_variables.seen()) {
+  else if (is_dbg_var_opt)
     std::cout << "****CHECKING DEBUG VARIABLES****\n";
+
   for (all_dies_iterator<dwarf> iter = all_dies_iterator<dwarf> (dw);
        iter != all_dies_iterator<dwarf> (); ++iter)
   {
-	 dwarf::debug_info_entry const &die = *iter;
-         bool bFormalParameter = die.tag () == DW_TAG_formal_parameter;
-         bool bLocalVar = die.tag () == DW_TAG_variable;
+    dwarf::debug_info_entry const &die = *iter;
+    if (is_dbg_line_opt) {
+      bool bFormalParameter = die.tag () == DW_TAG_formal_parameter;
+      bool bLocalVar = die.tag () == DW_TAG_variable;
+	  bool bSubprogram = die.tag () == DW_TAG_subprogram;
+	  if (!bFormalParameter && !bLocalVar && !bSubprogram)
+        continue;
+
+	  Dwarf_Die die_c_ln,
+	  *die_c = dwarf_offdie (c_dw, die.offset (), &die_c_ln);
+	  if (die_c == NULL)
+		std::cout << "there is no die!!" << std::endl;
+	  dwarf::debug_info_entry::attributes_type const &attrs
+	  = die.attributes ();
+
+	  if (attrs.find (DW_AT_decl_line) == attrs.end ()
+		  || attrs.find (DW_AT_decl_file) == attrs.end()) {
+        num_of_errs++;
+		const char *name = dwarf_diename(&die_c_ln);
+		if (name) {
+          if(strlen(name) > 1 && name[0] == '_' && name[1] == '_')
+            continue;
+          if (bFormalParameter || bLocalVar)
+            std::cout << "Variable <" << name << "> does not have line or file set!!!" << std::endl;
+          else
+            std::cout << "Function <" << name << "> does not have line or file set!!!" << std::endl;
+		}
+	  }
+  } else if (is_dbg_var_opt) {
+      bool bFormalParameter = die.tag () == DW_TAG_formal_parameter;
+      bool bLocalVar = die.tag () == DW_TAG_variable;
          
-         if(!bFormalParameter && !bLocalVar)
-	     continue;
+      if(!bFormalParameter && !bLocalVar)
+	    continue;
 
 	Dwarf_Die die_c_var,
 	*die_c = dwarf_offdie (c_dw, die.offset (), &die_c_var);
 	if (die_c == NULL)
-		std::cout << "there is no die c !!" << std::endl;
+		std::cout << "there is no die!!" << std::endl;
 	dwarf::debug_info_entry::attributes_type const &attrs
 	= die.attributes ();
         
@@ -197,6 +229,9 @@ process(Dwarf *c_dw, dwarf const &dw)
        std::cout << "	-location coverage:" << coverage << "\%" << std::endl;
     }
   }
+
+  if (is_dbg_line_opt && num_of_errs == 0)
+    std::cout << "\n\n All declare lines and files are set properly! \n\n";
 }
 
 int
