@@ -1,0 +1,6 @@
+VS-2018/ direktorijum je root direktorijum naseg projekta.
+On sadrzi datoteke preuzete iz elfutils projekta koji sadrzi
+biblioteke za citanje ELF i DWARF formata.
+
+dwarflint/dwarfcheck.cc file je fajl koji sadrzi logiku alata
+i u njemu je odradjena vecina teme projekta.
