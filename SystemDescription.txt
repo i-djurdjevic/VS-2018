@@ -15,7 +15,7 @@ Jedna od mogucnosti alata 'dwarfcheck' jeste racunanje pokrivenosti (debag infor
 Sto znaci, ako je pokrivenost promenljive 100% njenu vrednost cemo moci da procitamo u svakom trenutku debagovanja, dok u optimizovanom
 kodu neke promenljive imaju pokrivenost manje od toga (ili je nemaju) te je postojanje informacije o lokaciji promenljive jako bitno.
 
-Pored pomenutog, za sada alat ima jos jkednu opciju koja proverava debag linije promenljivih u programu.
+Pored pomenutog, za sada alat ima jos jednu opciju koja proverava debag linije promenljivih u programu.
 
 Uporedjeni su rezultati koristeci 'llvm/clang' i gcc programski prevodioc.
 
@@ -42,7 +42,7 @@ Npr.
 	DW_TAG_formal_parametar ===> argument funkcije
 	
 Svaki TAG ima i svoje atribute. Nama od posebnog znacaja za seminarski rad jesu atributi promenljivih i
-formalnih parametara, tacnije atribut "DW_AT_location" gde u odnostu na doseg promenljivih racunamo lokacijsku pokrivenost.
+formalnih parametara, tacnije atribut "DW_AT_location" gde u odnosu na doseg promenljivih racunamo lokacijsku pokrivenost.
 
 Algoritam se zasniva na iteraciji kroz celo stablo koje sadrzi debag informacije, prilikom cega analiziramo TAG-ove
 koji su predmet testiranja.
