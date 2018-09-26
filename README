@@ -28,12 +28,25 @@ Pedantic checking of DWARF stored in ELF files.
      --usage                Give a short usage messageReport bugs to https://sourceware.org/bugzilla
 
 
-../dwarflint/dwarfcheck --check-debug-lines test/1_gcc
+../build/dwarflint/dwarfcheck --check-debug-vars test/2_gcc
 WE ARE RUNNING dwarfcheck !!!!!
-****CHECKING DEBUG LINES****
-./dwarflint/dwarfcheck --check-debug-vars test/1_clang
+****CHECKING DEBUG VARIABLES****
+Function <main> variable <num>:
+	-location coverage:100%
+Function <addNumbers> variable <n>:
+	-location coverage:100%
+Function <addNumbers> variable <z>:
+	-location coverage:100%
+
+../build/dwarflint/dwarfcheck --check-debug-vars test/2_clang
 WE ARE RUNNING dwarfcheck !!!!!
-****CHECKING DEBUG VARIABLES***
+****CHECKING DEBUG VARIABLES****
+Function <addNumbers> variable <n>:
+	-location coverage:100%
+Function <addNumbers> variable <z>:
+	-location coverage:100%
+Function <main> variable <num>:
+	-location coverage:35%
 
 
 Elfutils:
