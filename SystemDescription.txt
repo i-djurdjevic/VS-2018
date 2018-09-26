@@ -1,0 +1,51 @@
+====Problem====
+
+Cilj rada je testiranje uspesnosti programskih prevodioca prilikom generisanja debag (eng. debug) informacija.
+Alati za dinamicku verifikaciju softvera koriste pomenute informacije kako bi procitali vrednost neke promenljive,
+ispisali informacije o registrima, funkcijama itd. Za potrebe rada testirana je '.debug_info' sekcija, tacnije
+debag informacije o promenljivama. Zapravo, ukoliko zatrazimo od alata za otklanjanje gresaka da ispise vrednost promenljive
+u programu koji analiziramo, isti ce probati da procita informaciju o lokaciji odredjene promenljive. Lokacija se moze javiti u
+dva oblika:
+	a) 'DW_AT_location' atribut ima navedenu lokaciju odredjene promenljive, koji predstavlja 100% pokrivenost u njenom dosegu.
+	b) 'DW_AT_location' za svoju vrednost ima locacijsku listu.
+		-referenca na '.debug_loc' sekciju gde odredjena promenljiva ima vise lokacija u svom dosegu. Karakteristicno za
+		optimizovan kod.
+
+Jedna od mogucnosti alata 'dwarfcheck' jeste racunanje pokrivenosti (debag informacijama) promenljivih u generisanom kodu.
+Sto znaci, ako je pokrivenost promenljive 100% njenu vrednost cemo moci da procitamo u svakom trenutku debagovanja, dok u optimizovanom
+kodu neke promenljive imaju pokrivenost manje od toga (ili je nemaju) te je postojanje informacije o lokaciji promenljive jako bitno.
+
+Pored pomenutog, za sada alat ima jos jkednu opciju koja proverava debag linije promenljivih u programu.
+
+Uporedjeni su rezultati koristeci 'llvm/clang' i gcc programski prevodioc.
+
+
+====Arhitektura projekta====
+
+VS-2018/ direktorijum je root direktorijum naseg projekta.
+On sadrzi datoteke preuzete iz elfutils projekta koji sadrzi
+biblioteke za citanje ELF i DWARF formata.
+
+dwarflint/dwarfcheck.cc file je fajl koji sadrzi logiku alata
+i u njemu je odradjena vecina teme projekta.
+
+====Algoritam====
+
+Ucitava se DWARF fajla prevedenim sa '-g', tacnije debag informacije istog, i iste se parsiraju na odredjen nacin.
+Struktura '.debug_info' sekcije je takva, da je implementirana kao drvolika struktura, gde su cvorovi drveta
+DIEs (eng. Debug Info Entries) koji predstavljaju odredjene entitete programa (funkcije, promenljive, izvorne fajlove, tipove itd.).
+Svaki DIE je predstavljen u obliku DWARF TAG-a (prema standardu DWARF).
+
+Npr.
+	DW_TAG_subprogram ===> odredjena funkcija
+	DW_TAG_variable ===> odredjena promenljiva
+	DW_TAG_formal_parametar ===> argument funkcije
+	
+Svaki TAG ima i svoje atribute. Nama od posebnog znacaja za seminarski rad jesu atributi promenljivih i
+formalnih parametara, tacnije atribut "DW_AT_location" gde u odnostu na doseg promenljivih racunamo lokacijsku pokrivenost.
+
+Algoritam se zasniva na iteraciji kroz celo stablo koje sadrzi debag informacije, prilikom cega analiziramo TAG-ove
+koji su predmet testiranja.
+
+TODO:
+	-testirati ponasanje alata prilikom inline-ovanja

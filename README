@@ -9,7 +9,7 @@ Build the project:
 
 mkdir build
 cd build
-../VS-2018/configure --enable-maintainer-mode
+../VS-2018/configure
 make
 
 Run the tool:
